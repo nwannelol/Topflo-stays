@@ -4,7 +4,7 @@ import hashlib
 import os
 from flask import Flask, request, jsonify
 from firebase_admin import firestore
-from utils import store_access_token
+from src.utils import store_access_token
 
 app = Flask(__name__)
 db = firestore.client()
@@ -35,7 +35,7 @@ def handle_webhook():
 
             db.collection("managers").document(manager_id).update({
                 "status": "active",
-                "expiry": datetime.now() + datetime.timedelta(days=30)
+                "expiry": datetime.datetime.now() + datetime.timedelta(days=30)
             })
 
     return jsonify({"status": "success"}), 200

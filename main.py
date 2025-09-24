@@ -1,5 +1,7 @@
 from typing import Final
-from manager import generate_access_token
+from src.utils import generate_access_token
+from src.manager import verify_access_code
+from src.handlers.manager_tools import bookings_today, availability, price_recommendation, get_availability_callback_handler
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, MessageHandler, CallbackQueryHandler, filters, ContextTypes
 from firebase_admin import credentials, firestore
@@ -71,7 +73,14 @@ async def handle_back(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
     if context.user_data["history"]:
         last_page = context.user_data["history"].pop()
         if last_page == "role_selection":
-            await send_role_selection(query)
+            # We need to re-send the role selection as a new message since callback edited messages cannot be reverted
+            await query.message.reply_text(
+                "👋 Welcome to Topflo stays! Please select your role to continue:",
+                reply_markup=InlineKeyboardMarkup([
+                    [InlineKeyboardButton("I am a Topflo stays Manager", callback_data="manager")],
+                    [InlineKeyboardButton("I am a Topflo stays Client", callback_data="client")],
+                ])
+            )
         elif last_page == "manager_access":
             await query.edit_message_text(
                 "Please enter your manager access code to unlock property management tools.",
@@ -122,8 +131,14 @@ def main() -> None:
     
     # Register command handlers
     application.add_handler(CommandHandler("start", start))
+    application.add_handler(CommandHandler("bookings_today", bookings_today))
+    application.add_handler(CommandHandler("availability", availability))
+    application.add_handler(CommandHandler("price_recommendation", price_recommendation))
     application.add_handler(CallbackQueryHandler(handle_role_selection, pattern="^(manager|client)$"))
     application.add_handler(CallbackQueryHandler(handle_back, pattern="^back$"))
+    application.add_handler(get_availability_callback_handler())
+    # Any non-command message when in manager access flow should attempt code verification
+    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, verify_access_code))
 
     # Start the bot
     application.run_polling()

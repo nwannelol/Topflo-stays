@@ -5,10 +5,13 @@ import requests
 import os
 from dotenv import load_dotenv
 from datetime import datetime, timedelta
-from utils import generate_access_token, store_access_token 
+from src.utils import generate_access_token, store_access_token 
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, MessageHandler, CallbackQueryHandler, filters, ContextTypes
 from firebase_admin import firestore, credentials
+
+# Initialize Firestore if not already initialized via utils
+db = firestore.client()
 
 #Load environmental variables
 load_dotenv()
